@@ -37,7 +37,7 @@ def find_features(feature_doc):
 
     return features
 
-print(find_features(movie_reviews.words('neg/cv004_12641.txt')))
+# print(find_features(movie_reviews.words('neg/cv004_12641.txt')))
 
 feature_sets = []
 for (review_word_list, category) in documents:
@@ -45,3 +45,11 @@ for (review_word_list, category) in documents:
     feature_sets.append(feature)
 
 
+train_set = feature_sets[:1500]
+test_set = feature_sets[1500:]
+
+classifier = nltk.NaiveBayesClassifier.train(train_set)
+score = nltk.classify.accuracy(classifier, test_set)
+print('Accuracy : ', score)
+
+classifier.show_most_informative_features(15)
