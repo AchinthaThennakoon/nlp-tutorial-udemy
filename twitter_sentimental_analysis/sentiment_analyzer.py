@@ -5,6 +5,7 @@ import csv
 from string import punctuation
 import re
 from sklearn.model_selection import train_test_split
+import pickle
 
 # load tweet data
 data_set = []
@@ -43,8 +44,8 @@ class PreprocessTweets:
 
     def _process_tweet(self, tweet):
         tweet = tweet.lower()  # convert text to lower-case
-        tweet = re.sub('((www\.[^\s]+)|(https?://[^\s]+))', 'URL', tweet)  # remove URLs
-        tweet = re.sub('@[^\s]+', 'AT_USER', tweet)  # remove usernames
+        tweet = re.sub(r'((www\.[^\s]+)|(https?://[^\s]+))', 'URL', tweet)  # remove URLs
+        tweet = re.sub(r'@[^\s]+', 'AT_USER', tweet)  # remove usernames
         tweet = re.sub(r'#([^\s]+)', r'\1', tweet)  # remove the # in #hashtag
         tweet = word_tokenize(tweet)  # remove repeated characters (helloooooooo into hello)
 
@@ -102,4 +103,37 @@ def extract_features(tweet, word_features):
 
 
 # Extract features for training and testing sets
-training_features = nltk.classify.apply_features(extract_features, preprocessed_training_set)
+training_features = nltk.classify.apply_features(
+    lambda tweet: extract_features(tweet, training_data_features),
+    preprocessed_training_set
+)
+
+NBayesClassifier = nltk.NaiveBayesClassifier.train(training_features)
+
+# Save the trained model to a file
+with open('naive_bayes_model.pkl', 'wb') as model_file:
+    pickle.dump(NBayesClassifier, model_file)
+
+# To load the model later:
+# with open('naive_bayes_model.pkl', 'rb') as model_file:
+#     loaded_classifier = pickle.load(model_file)
+
+label = NBayesClassifier.classify(extract_features(
+    tweet_processor._process_tweet("this apple is good"), training_data_features
+))
+print("Label for 'this apple is good':", label)
+print("Classifier accuracy:", nltk.classify.accuracy(NBayesClassifier, training_features))
+print("**" * 50)
+
+classified_result_labels = []
+for tweet in preprocessed_testing_set:
+    classified_result_labels.append(NBayesClassifier.classify(extract_features(tweet[0])))
+
+if classified_result_labels.count('positive') > classified_result_labels.count('negative'):
+    print("Overall Positive Sentiment")
+    print("Positive Sentiment Percentage = " + str(
+        100 * classified_result_labels.count('positive') / len(classified_result_labels)) + "%")
+else:
+    print("Overall Negative Sentiment")
+    print("Negative Sentiment Percentage = " + str(
+        100 * classified_result_labels.count('negative') / len(classified_result_labels)) + "%")
